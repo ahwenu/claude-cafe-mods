@@ -36,10 +36,13 @@ type GoTarget = { kinds: Kind[]; showHidden: boolean }
 const latestPress = new Map<string, () => void>()
 let firedByFocus: { key: string; at: number } | null = null
 
-// ── 調査用ログ（/tmp/cafe-files-debug.log）────────────────
+// ── 調査用ログ ─────────────────────────────────────
+// 描画・押下・フォーカスの流れを追うときだけ DEBUG を true にする（/tmp/cafe-files-debug.log）
+const DEBUG = false
 const DEBUG_LOG = '/tmp/cafe-files-debug.log'
 const debugLines: string[] = []
 function dbg($: any, msg: string): void {
+  if (!DEBUG) return
   const t = new Date()
   const ts = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}.${String(t.getMilliseconds()).padStart(3, '0')}`
   debugLines.push(`${ts} ${msg}`)
