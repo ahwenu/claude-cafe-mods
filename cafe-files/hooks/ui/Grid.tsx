@@ -132,31 +132,33 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
   )
 }
 
-// デスクトップの実測（/files-lab）: 1 セル ≒ 7.9px、空白（U+2800）1 文字 ≒ 8.9px、ボタン 1 段 ≒ 24px。
+// デスクトップの実測（/files-lab）: 空白（U+2800）1 文字 ≒ 8.9px、ボタンの左右の余白 ≒ 16px。
 // ボタンのラベルに改行は使えず、文字が枠より長いと末尾が「…」になる。
-const CELL_PX = 7.9
 const BLANK_PX = 8.9
 const BUTTON_PAD_PX = 16
-const BUTTON_ROW_PX = 24
 
-/** 文字を出さないボタンを横いっぱいの幅にするための空白ラベル（「…」が出ないぎりぎりの長さ） */
-export function coverLabel(widthCells: number): string {
-  const inner = widthCells * CELL_PX - 2 - BUTTON_PAD_PX
-  const n = Math.max(1, Math.floor(inner / BLANK_PX) - 1)
-  return '\u2800'.repeat(n)
+/**
+ * 帯のラベル: 「🔍 詳細を見る」の左右を空白（U+2800）で埋めて、画像の幅いっぱいにする。
+ * 長すぎると末尾が「…」になるので、実測値から 1 文字ぶん控えめに数える。
+ */
+const BAND_TEXT = '🔍 詳細を見る'
+const BAND_TEXT_PX = 104
+export function bandLabel(imagePx: number): string {
+  const room = imagePx - BUTTON_PAD_PX - BAND_TEXT_PX
+  const side = Math.max(0, Math.floor(room / 2 / BLANK_PX) - 1)
+  const pad = '\u2800'.repeat(side)
+  return `${pad}${BAND_TEXT}${pad}`
 }
 
 /**
- * カード全体を覆うボタンの壁（カーソルを乗せると出る）。画像そのものはボタンにできないので、
- * 文字を出さない半透明のボタンを横いっぱい・縦に積み重ねて、カードのどこを押しても開くようにする。
- * 1 回目のクリックは ui.focus で届く（register.tsx の対策）ので、乗せて押せば 1 回で開く。
+ * カーソルを乗せた時だけ、画像の真ん中に横いっぱいの半透明の帯（ボタン）を 1 本出す。
+ * 画像そのものはボタンにできないので、帯を押して開く。画像の枠の中（画像の後ろ）に置くと
+ * 画像より上に描かれる。1 回目のクリックは ui.focus で届く（register.tsx の対策）。
  */
-function CardCover(ctx: Ctx, i: number, widthCells: number, heightPx: number, open: () => void): any {
+function DetailBand(ctx: Ctx, i: number, imagePx: number, open: () => void): any {
   const { Box } = ctx.els
   const Button: any = mkButton(ctx)
   if (ctx.surface === 'terminal') return null
-  const rows = Math.ceil(heightPx / BUTTON_ROW_PX) + 1 // はみ出した分は overflow で切れる
-  const label = coverLabel(widthCells)
   return (
     <Box
       position="absolute"
@@ -166,12 +168,10 @@ function CardCover(ctx: Ctx, i: number, widthCells: number, heightPx: number, op
       bottom={0}
       display="none"
       hover={{ display: 'flex' }}
-      flexDirection="column"
-      overflow="hidden"
+      justifyContent="center"
+      alignItems="center"
     >
-      {Array.from({ length: rows }, (_, r) => (
-        <Button key={r === 0 ? `detail-${i}` : `detail-${i}-${r}`} label={label} onPress={open} />
-      ))}
+      <Button key={`detail-${i}`} label={bandLabel(imagePx)} onPress={open} />
     </Box>
   )
 }
@@ -200,12 +200,12 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
     >
       <Box height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
+        {DetailBand(ctx, i, px, open)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
         {badge}
       </Text>
-      {CardCover(ctx, i, cardW, Math.round(px * 0.75) + 80, open)}
     </Box>
   )
 }
