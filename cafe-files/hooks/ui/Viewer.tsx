@@ -343,6 +343,14 @@ export function Viewer(
           label={`${glyph('coffee')} プロンプトに入れる`}
           onPress={() => p.actions.insertPath(e.path)}
         />
+        {(p.actions as any).copyFile && (
+          <Button
+            key="viewer-copy-file"
+            hotkey="f"
+            label={e.kind === 'image' ? '🖼 画像をコピー' : '📄 ファイルをコピー'}
+            onPress={() => (p.actions as any).copyFile(e.path)}
+          />
+        )}
         <Button key="viewer-copy" hotkey="c" label={`${glyph('copy')} パスをコピー`} onPress={() => p.actions.copyPath(e.path)} />
       </Box>
     </Box>

@@ -10,8 +10,8 @@ import {
   quotePath,
   formatDate,
   formatSize,
-  findMatchDirs,
-  listDir,
+  clipboardPlan,
+  findMatchDirs,  listDir,
   parentOf,
   parseKinds,
   resolveTarget,
@@ -346,5 +346,20 @@ describe('resolveTarget', () => {
     expect(resolveToast({ path: '/a/b', reason: 'sibling' }, ['image', 'doc'])).toContain('隣の b')
     expect(resolveToast({ path: '/a', reason: 'self' }, ['image'])).toBeNull()
     expect(resolveToast({ path: '/a', reason: 'none' }, ['image'])).toBeNull()
+  })
+})
+
+describe('clipboardPlan', () => {
+  test('images carry image data and the file, other files carry the file; the path is an argument', () => {
+    const img = clipboardPlan('a b.HEIC')
+    expect(img.kind).toBe('image')
+    const argv = img.argv('/x/a b.HEIC')
+    expect(argv[0]).toBe('/usr/bin/osascript')
+    expect(argv.at(-1)).toBe('/x/a b.HEIC')
+    expect(argv.join('\n')).toContain('NSImage')
+    expect(argv.join('\n')).not.toContain('/x/a b.HEIC\'')
+    const doc = clipboardPlan('notes.md')
+    expect(doc.kind).toBe('file')
+    expect(doc.argv('/x/notes.md').join('\n')).not.toContain('NSImage')
   })
 })

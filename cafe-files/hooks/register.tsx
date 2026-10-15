@@ -5,6 +5,7 @@ import {
   baseName,
   breadcrumbs,
   classify,
+  clipboardPlan,
   findMatchDirs,
   listDirResult,
   parseKinds,
@@ -74,6 +75,19 @@ function startBgm($: any): void {
   })().finally(() => {
     if (bgm === ctl) bgm = null
   })
+}
+
+/** ファイルそのものをクリップボードへ（macOS の osascript）。画像は画像データとして */
+async function copyFileToClipboard($: any, path: string): Promise<void> {
+  const name = baseName(path)
+  const plan = clipboardPlan(name)
+  try {
+    const r = await $.process.run(plan.argv(path), { timeoutMs: 15000 })
+    if (r.exitCode !== 0) throw new Error(String(r.stderr || '').trim().split('\n').pop() || 'osascript が失敗しました')
+    $.ui.toast(plan.kind === 'image' ? `🖼 画像をコピーしました: ${name}` : `📄 ファイルをコピーしました: ${name}`)
+  } catch (err: any) {
+    $.ui.toast(`コピーできませんでした: ${err?.message ?? err}`)
+  }
 }
 
 function stopBgm(): void {
@@ -239,6 +253,7 @@ export const register: Register = (on, options) => {
       cycleSize: () => void
       bgm: boolean
       toggleBgm: () => void
+      copyFile: (path: string) => void
     } = {
       bgm: isBgm,
       toggleBgm: () => {
@@ -311,10 +326,13 @@ export const register: Register = (on, options) => {
           $.ui.toast(`パスを挿入: ${baseName(path)}`)
         })()
       },
+      copyFile: (path: string) => {
+        void copyFileToClipboard($, path)
+      },
       copyPath: path => {
         void (async () => {
           await $.ui.copy({ text: path, surface: e.surface })
-          $.ui.toast(`コピー: ${baseName(path)}`)
+          $.ui.toast(`パスをコピーしました: ${baseName(path)}`)
         })()
       },
     }

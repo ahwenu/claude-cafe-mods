@@ -396,3 +396,29 @@ export function resolveToast(r: Resolved, kinds: Kind[]): string | null {
   const where = r.reason === 'sibling' ? '隣の ' : ''
   return `☕ ${where}${baseName(r.path)} を開きました（${what}があるフォルダ）`
 }
+
+/**
+ * ファイルそのものをクリップボードに載せる osascript の引数。path は argv で渡す（スクリプトに埋め込まない）。
+ * NSPasteboard にファイル URL を書くので Finder・Slack・メールなどへファイルとして貼れる。
+ * 画像は画像データ（NSImage）も一緒に載せるので、画像を受け付けるアプリにはそのまま絵が貼れる。
+ */
+export type ClipPlan = { kind: 'image' | 'file'; argv: (path: string) => string[] }
+const CLIP_IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'tif', 'tiff', 'heic', 'heif', 'webp', 'bmp'])
+export function clipboardPlan(name: string): ClipPlan {
+  const isImage = CLIP_IMAGE_EXT.has(extOf(name))
+  const objs = isImage ? '{img, u}' : '{u}'
+  const lines = [
+    'use framework "AppKit"',
+    'on run argv',
+    'set u to current application\'s NSURL\'s fileURLWithPath:(item 1 of argv)',
+    ...(isImage ? ['set img to current application\'s NSImage\'s alloc()\'s initWithContentsOfURL:u', 'if img is missing value then error "画像を読み込めませんでした"'] : []),
+    'set pb to current application\'s NSPasteboard\'s generalPasteboard()',
+    'pb\'s clearContents()',
+    `if not (pb's writeObjects:${objs}) as boolean then error "クリップボードに書けませんでした"`,
+    'end run',
+  ]
+  return {
+    kind: isImage ? 'image' : 'file',
+    argv: path => ['/usr/bin/osascript', ...lines.flatMap(l => ['-e', l]), path],
+  }
+}
