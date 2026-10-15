@@ -47,6 +47,18 @@ function dbg($: any, msg: string): void {
 }
 
 // サムネ生成の完了などによる描き直しは、まとめて 1 回にする
+/**
+ * ペイン幅の揺れを無視する。スクロールバーが出る/消えるだけで幅が 1〜3 列変わり、
+ * カードの列数 → 高さ → スクロールバー…と描き直しが止まらなくなる（その間ボタンが
+ * 差し替わり続けてクリックが捨てられる）。小さな変化は前回の幅を使い続ける。
+ */
+let lastWidth = 0
+const WIDTH_JITTER = 4
+function stableWidth(w: number): number {
+  if (!lastWidth || Math.abs(w - lastWidth) > WIDTH_JITTER) lastWidth = w
+  return lastWidth
+}
+
 let invalidateTimer = false
 function requestRedraw($: any, why: string): void {
   if (invalidateTimer) return
@@ -300,7 +312,8 @@ export const register: Register = (on, options) => {
       if (await warmThumbs(fac, entries, surface).catch(() => false)) requestRedraw($, 'thumbs')
     })()
     const sprite = pet && pet !== 'none' ? await loadPet(fac, pet).catch(() => null) : null
-    const width = Number(e.props?.bodyColumns ?? e.viewport?.columns ?? 40)
+    const rawWidth = Number(e.props?.bodyColumns ?? e.viewport?.columns ?? 40)
+    const width = stableWidth(rawWidth)
     // engine の制約: $ はオブジェクトに入れられない。UI は els / e だけで描く
     const ctx = { e, els, surface, width } as unknown as Ctx
 
@@ -418,7 +431,7 @@ export const register: Register = (on, options) => {
     // 描いた木からボタンのキーと処理を集め、最新として覚える
     latestPress.clear()
     collectPress(tree, latestPress)
-    dbg($, `render ${Date.now() - renderStart}ms ${openEntry ? 'detail' : 'list'} entries=${entries.length} buttons=${latestPress.size}`)
+    dbg($, `render ${Date.now() - renderStart}ms ${openEntry ? 'detail' : 'list'} entries=${entries.length} buttons=${latestPress.size} width=${rawWidth}->${width} vp=${e.viewport?.columns ?? '-'}x${e.viewport?.rows ?? '-'}`)
     return tree
   })
 }
