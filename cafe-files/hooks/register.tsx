@@ -236,6 +236,12 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // 調査用: フォーカスの移動も記録する
+  on('ui.focus', async ($, e, next) => {
+    if (e.requestId === PANE) dbg($, `focus ${e.element ?? '(engine)'}`)
+    return next(e)
+  })
+
   // 古い描画のボタンが押されても、キーから最新の処理を引いて実行する
   on('ui.press', async ($, e, next) => {
     if (e.requestId === PANE && e.plugin === 'cafe-files') {

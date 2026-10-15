@@ -133,28 +133,17 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
 }
 
 /**
- * カードにカーソルを乗せると、サムネが暗くなり中央に「🔍 詳細を見る」が出る。
- * デスクトップで確実に押せるのは普通のボタンだけなので、ボタンをサムネの上に重ねる。
- * 表示の切り替えは画面側（CSS の hover）だけで行い、Mod の描き直しを伴わない。
+ * サムネの右下に常に出る「🔍 見る」ボタン。
+ * カーソルを乗せた時だけ出すボタンは、押した瞬間にペインがフォーカスを取って描き直され、
+ * 一瞬消えてクリックが成立しないことがデスクトップで分かった。常に出ているボタンは確実に押せる。
  */
-function DetailOverlay(ctx: Ctx, i: number, open: () => void): any {
+function DetailBadge(ctx: Ctx, i: number, open: () => void): any {
   const { Box } = ctx.els
   const Button: any = mkButton(ctx)
   if (ctx.surface === 'terminal') return null
   return (
-    <Box
-      position="absolute"
-      top={0}
-      left={0}
-      right={0}
-      bottom={0}
-      display="none"
-      hover={{ display: 'flex' }}
-      backgroundColor="#1A100AB3"
-      justifyContent="center"
-      alignItems="center"
-    >
-      <Button key={`detail-${i}`} variant="primary" label="🔍 詳細を見る" onPress={open} />
+    <Box position="absolute" bottom={0} right={0}>
+      <Button key={`detail-${i}`} label="🔍 見る" onPress={open} />
     </Box>
   )
 }
@@ -181,10 +170,9 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
       paddingBottom={1}
       hover={{ borderColor: RULE_HI, backgroundColor: PANEL2 }}
     >
-      {/* key を付けない: カーソルの判定（hover）はカード全体で行う */}
       <Box height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
-        {DetailOverlay(ctx, i, open)}
+        {DetailBadge(ctx, i, open)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
