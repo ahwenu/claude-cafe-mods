@@ -45,9 +45,9 @@ export function gearSvg(isOpen: boolean, color = '#EDB273'): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26"><path fill="${color}" d="${isOpen ? MD_CLOSE : MD_GEAR}"/></svg>`
 }
 function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
-  const { Box, Client, Button, Svg } = ctx.els
+  const { Box, Button, Svg } = ctx.els
   // 開いている間は確実に押せる普通のボタンで「閉じる」
-  if (isOpen || !Client || !Svg || ctx.surface === 'terminal') {
+  if (isOpen || !Svg || ctx.surface === 'terminal') {
     return (
       <Button
         key={isOpen ? 'settings-close' : 'settings-open'}
@@ -58,12 +58,12 @@ function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
       />
     )
   }
-  // 閉じている間は枠なしのギア。押せる範囲はアイコンより一回り広く取る
+  // 閉じている間は枠なしのギア。カーソルを乗せると押せるボタンに変わる（hover は画面側だけで切り替わる）
   return (
-    <Box key="gear" flexDirection="row" alignItems="center" paddingX={1}>
+    <Box key="gear" flexDirection="row" alignItems="center">
       <Svg source={gearSvg(false)} alt="設定" width={26} height={26} />
-      <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
-        <Client key="settings-open" module="./Hit.tsx" props={{ msg: { toggleSettings: true } }} width={6} height={3} />
+      <Box position="absolute" top={0} right={0} display="none" hover={{ display: 'flex' }}>
+        <Button key="settings-open" hotkey="s" label="⚙ 設定" onPress={toggle} />
       </Box>
     </Box>
   )

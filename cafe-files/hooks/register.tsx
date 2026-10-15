@@ -178,22 +178,6 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // 透明な押せる領域（ui/Hit.tsx）からの通知: サムネ → 詳細、ギア → 設定
-  on('ui.message', async ($, e, next) => {
-    const d: any = e.data
-    if (e.requestId === PANE && d && typeof d === 'object') {
-      if (typeof d.open === 'string') {
-        await update($, openA, () => d.open)
-        return {}
-      }
-      if (d.toggleSettings === true) {
-        await update($, settingsA, v => !v)
-        return {}
-      }
-    }
-    return next(e)
-  })
-
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const els = $.ui.resolve(e)
     const io = { list: (p: string) => $.fs.list(p), stat: (p: string) => $.fs.stat(p) }

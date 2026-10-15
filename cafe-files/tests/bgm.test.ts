@@ -28,7 +28,7 @@ test('/files loops the jazz once, and the BGM button stops and restarts it', asy
 
   // 設定の BGM ボタンでオフ → オンにすると、止めてから鳴らし直す
   const ui = await $.ui.mount({ plugin: 'cafe-files', surface: 'desktop', component: 'Pane', requestId: 'cafe-files', props: { bodyColumns: 60 } as any })
-  await ui.pointer({ type: 'down', x: 0, y: 0, button: 'left', in: 'settings-open' })
+  await ui.press({ key: 'settings-open' })
   expect((await ui.find({ key: 'set-bgm' }))?.text).toContain('オン')
   await ui.press({ key: 'set-bgm' })
   expect((await ui.find({ key: 'set-bgm' }))?.text).toContain('オフ')

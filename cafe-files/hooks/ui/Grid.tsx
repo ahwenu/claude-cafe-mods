@@ -133,16 +133,28 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
 }
 
 /**
- * カード全体を押せるようにする: 何も描かない透明な Client（./Hit）をカードの上に重ねる。
- * 押すと { open: path } が ui.message に届き、詳細を開く。大きさは数値（セル）で渡し、
- * はみ出した分は overflow で切る（% 指定だとデスクトップで領域が潰れることがある）。
+ * カードにカーソルを乗せると、サムネが暗くなり中央に「🔍 詳細を見る」が出る。
+ * デスクトップで確実に押せるのは普通のボタンだけなので、ボタンをサムネの上に重ねる。
+ * 表示の切り替えは画面側（CSS の hover）だけで行い、Mod の描き直しを伴わない。
  */
-function CardHit(ctx: Ctx, i: number, path: string, cols: number, rows: number): any {
-  const { Box, Client } = ctx.els
-  if (!Client || ctx.surface === 'terminal') return null
+function DetailOverlay(ctx: Ctx, i: number, open: () => void): any {
+  const { Box } = ctx.els
+  const Button: any = mkButton(ctx)
+  if (ctx.surface === 'terminal') return null
   return (
-    <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
-      <Client key={`thumb-hit-${i}`} module="./Hit.tsx" props={{ msg: { open: path } }} width={cols} height={rows} />
+    <Box
+      position="absolute"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      display="none"
+      hover={{ display: 'flex' }}
+      backgroundColor="#1A100AB3"
+      justifyContent="center"
+      alignItems="center"
+    >
+      <Button key={`detail-${i}`} variant="primary" label="🔍 詳細を見る" onPress={open} />
     </Box>
   )
 }
@@ -169,14 +181,15 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
       paddingBottom={1}
       hover={{ borderColor: RULE_HI, backgroundColor: PANEL2 }}
     >
-      <Box key={`thumb-${i}`} height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
+      {/* key を付けない: カーソルの判定（hover）はカード全体で行う */}
+      <Box height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
+        {DetailOverlay(ctx, i, open)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
         {badge}
       </Text>
-      {CardHit(ctx, i, e.path, cardW, rows + 12)}
     </Box>
   )
 }

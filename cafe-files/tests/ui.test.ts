@@ -44,8 +44,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
         copyPath: p => calls.push('copy:' + p),
       }
       on('ui.render', { component: 'Pane', requestId: 'ui-test' }, async ($, e) => {
-        // テスト自身のフックで描くので、Mod の surface module（Client）は使えない。外して描く
-        const els = { ...$.ui.resolve(e), Client: undefined } as any
+        const els = $.ui.resolve(e)
         const ctx = { $, e, els, surface: e.surface, width: 80 } as any
         return Screen(ctx, {
           entries: mode === 'empty' || mode === 'error' ? [] : ENTRIES,
