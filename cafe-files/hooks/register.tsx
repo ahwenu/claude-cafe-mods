@@ -34,6 +34,7 @@ type GoTarget = { kinds: Kind[]; showHidden: boolean }
 // Button の onPress は「その描画」の間だけ有効。押す直前に描き直されると古いボタンへの
 // 押下が捨てられることがあるので、キー → 最新の処理を覚えておき ui.press で拾う。
 const latestPress = new Map<string, () => void>()
+let firedByFocus: { key: string; at: number } | null = null
 
 // ── 調査用ログ（/tmp/cafe-files-debug.log）────────────────
 const DEBUG_LOG = '/tmp/cafe-files-debug.log'
@@ -236,15 +237,30 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // 調査用: フォーカスの移動も記録する
+  // デスクトップのペインでは、まだフォーカスの無いボタンを押すと 1 回目は「フォーカス移動」
+  // だけが届き、押下は 2 回目にしか届かない。人がボタンにフォーカスを移したら、その場で
+  // そのボタンの処理を実行する（直後に届く同じボタンの押下は二重にならないよう捨てる）。
   on('ui.focus', async ($, e, next) => {
-    if (e.requestId === PANE) dbg($, `focus ${e.element ?? '(engine)'}`)
+    if (e.requestId === PANE && e.origin.kind === 'person' && e.element) {
+      const f = latestPress.get(e.element)
+      dbg($, `focus ${e.element}${f ? ' -> run' : ''}`)
+      if (f) {
+        firedByFocus = { key: e.element, at: Date.now() }
+        f()
+      }
+    }
     return next(e)
   })
 
   // 古い描画のボタンが押されても、キーから最新の処理を引いて実行する
   on('ui.press', async ($, e, next) => {
     if (e.requestId === PANE && e.plugin === 'cafe-files') {
+      // フォーカス移動で実行済みの同じボタンなら、二重に実行しない
+      if (firedByFocus && firedByFocus.key === e.element && Date.now() - firedByFocus.at < 2500) {
+        dbg($, `press ${e.element} (already run on focus)`)
+        firedByFocus = null
+        return { element: e.element }
+      }
       const f = latestPress.get(e.element)
       dbg($, `press ${e.element}${f ? '' : ' (no handler)'}`)
       if (f) {
