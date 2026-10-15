@@ -62,3 +62,14 @@ test('pressing the thumbnail itself opens the detail view', async ($, on) => {
   expect(await ui.find({ type: 'Text', text: /b\.png/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('a click that arrives only as "up" also opens the detail view', async ($, on) => {
+  mock.env(on, { HOME: '/Users/me' })
+  on('session.cwd', async () => ({ value: '/Users/me/proj' }))
+  on('fs.list', async () => ({ value: [{ name: 'a.png', kind: 'file', size: 10, mtimeMs: 1, isLink: false }] }))
+  const ui = await $.ui.mount({ plugin: 'cafe-files', surface: 'desktop', component: 'Pane', requestId: 'cafe-files', props: { bodyColumns: 60 } as any })
+  await new Promise(r => setTimeout(r, 1600)) // 直前の down の影響を切る
+  await ui.pointer({ type: 'up', x: 3, y: 10, button: 'left', in: 'thumb-hit-0' })
+  expect(await ui.find({ key: 'viewer-insert' })).toBeDefined()
+  await ui.unmount()
+})

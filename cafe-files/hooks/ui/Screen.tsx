@@ -62,8 +62,8 @@ function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
   return (
     <Box key="gear" flexDirection="row" alignItems="center" paddingX={1}>
       <Svg source={gearSvg(false)} alt="設定" width={26} height={26} />
-      <Box position="absolute" top={0} left={0} right={0} bottom={0}>
-        <Client key="settings-open" module="./Hit.tsx" props={{ msg: { toggleSettings: true } }} width="100%" height="100%" />
+      <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
+        <Client key="settings-open" module="./Hit.tsx" props={{ msg: { toggleSettings: true } }} width={6} height={3} />
       </Box>
     </Box>
   )

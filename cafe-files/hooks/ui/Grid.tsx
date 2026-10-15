@@ -133,15 +133,16 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
 }
 
 /**
- * サムネ全体を押せるようにする: 何も描かない透明な Client（./Hit）をサムネの上に重ねる。
- * 押すと { open: path } が ui.message に届き、詳細を開く。
+ * カード全体を押せるようにする: 何も描かない透明な Client（./Hit）をカードの上に重ねる。
+ * 押すと { open: path } が ui.message に届き、詳細を開く。大きさは数値（セル）で渡し、
+ * はみ出した分は overflow で切る（% 指定だとデスクトップで領域が潰れることがある）。
  */
-function ThumbHit(ctx: Ctx, i: number, path: string): any {
+function CardHit(ctx: Ctx, i: number, path: string, cols: number, rows: number): any {
   const { Box, Client } = ctx.els
   if (!Client || ctx.surface === 'terminal') return null
   return (
-    <Box position="absolute" top={0} left={0} right={0} bottom={0}>
-      <Client key={`thumb-hit-${i}`} module="./Hit.tsx" props={{ msg: { open: path } }} width="100%" height="100%" />
+    <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
+      <Client key={`thumb-hit-${i}`} module="./Hit.tsx" props={{ msg: { open: path } }} width={cols} height={rows} />
     </Box>
   )
 }
@@ -170,12 +171,12 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
     >
       <Box key={`thumb-${i}`} height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
-        {ThumbHit(ctx, i, e.path)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
         {badge}
       </Text>
+      {CardHit(ctx, i, e.path, cardW, rows + 12)}
     </Box>
   )
 }
