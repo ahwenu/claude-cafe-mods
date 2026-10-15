@@ -133,17 +133,31 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
 }
 
 /**
- * サムネの右下に常に出る「🔍 見る」ボタン。
- * カーソルを乗せた時だけ出すボタンは、押した瞬間にペインがフォーカスを取って描き直され、
- * 一瞬消えてクリックが成立しないことがデスクトップで分かった。常に出ているボタンは確実に押せる。
+ * サムネ全体を覆うボタン（カーソルを乗せると出る）。ボタンの中には文字しか入れられないので、
+ * 改行で高さを、ボックスの stretch で幅を取り、画像の上に半透明のボタンをかぶせる。
+ * 1 回目のクリックは ui.focus で届く（register.tsx の対策）ので、乗せて押せば開く。
  */
-function DetailBadge(ctx: Ctx, i: number, open: () => void): any {
+function DetailCover(ctx: Ctx, i: number, hPx: number, open: () => void): any {
   const { Box } = ctx.els
   const Button: any = mkButton(ctx)
   if (ctx.surface === 'terminal') return null
+  const pad = Math.max(1, Math.ceil((hPx / 20 - 1) / 2)) // 1 行 ≒ 20px。はみ出した分は画像の枠で切れる
+  const nl = '\n'.repeat(pad)
   return (
-    <Box position="absolute" bottom={0} right={0}>
-      <Button key={`detail-${i}`} label="🔍 見る" onPress={open} />
+    <Box
+      position="absolute"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      display="none"
+      hover={{ display: 'flex' }}
+      flexDirection="column"
+      alignItems="stretch"
+      justifyContent="center"
+      overflow="hidden"
+    >
+      <Button key={`detail-${i}`} label={`${nl}🔍 詳細を見る${nl}`} onPress={open} />
     </Box>
   )
 }
@@ -172,7 +186,7 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
     >
       <Box height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
-        {DetailBadge(ctx, i, open)}
+        {DetailCover(ctx, i, Math.round(px * 0.75), open)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
