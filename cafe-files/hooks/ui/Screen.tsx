@@ -36,9 +36,8 @@ export function kindSummary(kinds: Kind[]): string {
 
 /**
  * 枠なしのギア: マテリアルデザインの settings アイコン（Svg）を描き、その上に
- * 透明な Markdown リンクを重ねて押下を拾う（Button は枠付きで、Svg は押せないため）
+ * 透明な Client（./Hit）を重ねて押下を拾う（Button は枠付きで、Svg は押せないため）
  */
-const GEAR_HREF = 'https://cafe-files.local/settings'
 const MD_GEAR =
   'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z'
 const MD_CLOSE = 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'
@@ -46,9 +45,9 @@ export function gearSvg(isOpen: boolean, color = '#EDB273'): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26"><path fill="${color}" d="${isOpen ? MD_CLOSE : MD_GEAR}"/></svg>`
 }
 function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
-  const { Box, Markdown, Button, Svg } = ctx.els
+  const { Box, Client, Button, Svg } = ctx.els
   // 開いている間は確実に押せる普通のボタンで「閉じる」
-  if (isOpen || !Markdown || !Svg || ctx.surface === 'terminal') {
+  if (isOpen || !Client || !Svg || ctx.surface === 'terminal') {
     return (
       <Button
         key={isOpen ? 'settings-close' : 'settings-open'}
@@ -63,8 +62,8 @@ function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
   return (
     <Box key="gear" flexDirection="row" alignItems="center" paddingX={1}>
       <Svg source={gearSvg(false)} alt="設定" width={26} height={26} />
-      <Box position="absolute" top={0} left={0} right={0} bottom={0} justifyContent="center" alignItems="center">
-        <Markdown key="settings-open" text={`[⠀⠀⠀⠀](${GEAR_HREF})`} pressableLinks={[GEAR_HREF]} onLinkPress={() => toggle()} />
+      <Box position="absolute" top={0} left={0} right={0} bottom={0}>
+        <Client key="settings-open" module="./Hit.tsx" props={{ msg: { toggleSettings: true } }} width="100%" height="100%" />
       </Box>
     </Box>
   )

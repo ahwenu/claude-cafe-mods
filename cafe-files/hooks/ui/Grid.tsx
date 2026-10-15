@@ -132,27 +132,16 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
   )
 }
 
-/** サムネを押すと開くための、見えないリンク（press を拾うのは Markdown のリンクだけなので）の href */
-export const thumbHref = (i: number) => `https://cafe-files.local/open/${i}`
-
 /**
- * サムネ全体を押せるようにする: 透明な空白（U+2800）だけのリンクを行ごとに並べ、サムネの上に重ねる。
- * カーソルを乗せた時だけ出るボタンと違い、描き直しで消えないので確実に押せる。
+ * サムネ全体を押せるようにする: 何も描かない透明な Client（./Hit）をサムネの上に重ねる。
+ * 押すと { open: path } が ui.message に届き、詳細を開く。
  */
-export function thumbHitText(i: number, wPx: number, hPx: number): string {
-  const cols = Math.max(8, Math.ceil(wPx / 5) + 2) // 余る分は overflow で切れる
-  const lines = Math.max(3, Math.ceil(hPx / 14) + 2)
-  const link = `[${'\u2800'.repeat(cols)}](${thumbHref(i)})`
-  return Array.from({ length: lines }, () => link).join('  \n')
-}
-
-// 注意: JSX は global の h で組み立てるので、引数名に h を使わない
-function ThumbHit(ctx: Ctx, i: number, wPx: number, hPx: number, open: () => void): any {
-  const { Box, Markdown } = ctx.els
-  if (!Markdown || ctx.surface === 'terminal') return null
+function ThumbHit(ctx: Ctx, i: number, path: string): any {
+  const { Box, Client } = ctx.els
+  if (!Client || ctx.surface === 'terminal') return null
   return (
-    <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
-      <Markdown key={`thumb-open-${i}`} text={thumbHitText(i, wPx, hPx)} pressableLinks={[thumbHref(i)]} onLinkPress={() => open()} />
+    <Box position="absolute" top={0} left={0} right={0} bottom={0}>
+      <Client key={`thumb-hit-${i}`} module="./Hit.tsx" props={{ msg: { open: path } }} width="100%" height="100%" />
     </Box>
   )
 }
@@ -181,7 +170,7 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
     >
       <Box key={`thumb-${i}`} height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
-        {ThumbHit(ctx, i, px, Math.round(px * 0.75), open)}
+        {ThumbHit(ctx, i, e.path)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
