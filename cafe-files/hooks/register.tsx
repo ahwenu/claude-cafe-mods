@@ -30,6 +30,37 @@ let resolveGen = 0
 
 type GoTarget = { kinds: Kind[]; showHidden: boolean }
 
+// ── 押下の取りこぼし対策 ───────────────────────────────
+// Button の onPress は「その描画」の間だけ有効。押す直前に描き直されると古いボタンへの
+// 押下が捨てられることがあるので、キー → 最新の処理を覚えておき ui.press で拾う。
+const latestPress = new Map<string, () => void>()
+
+// ── 調査用ログ（/tmp/cafe-files-debug.log）────────────────
+const DEBUG_LOG = '/tmp/cafe-files-debug.log'
+const debugLines: string[] = []
+function dbg($: any, msg: string): void {
+  const t = new Date()
+  const ts = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}:${String(t.getSeconds()).padStart(2, '0')}.${String(t.getMilliseconds()).padStart(3, '0')}`
+  debugLines.push(`${ts} ${msg}`)
+  if (debugLines.length > 400) debugLines.splice(0, debugLines.length - 400)
+  void $.fs.write(DEBUG_LOG, debugLines.join('\n') + '\n').catch(() => {})
+}
+
+// サムネ生成の完了などによる描き直しは、まとめて 1 回にする
+let invalidateTimer = false
+function requestRedraw($: any, why: string): void {
+  if (invalidateTimer) return
+  invalidateTimer = true
+  void $.clock
+    .sleep({ ms: 400 })
+    .catch(() => {})
+    .finally(() => {
+      invalidateTimer = false
+      dbg($, `invalidate (${why})`)
+      $.ui.invalidate('ui.render')
+    })
+}
+
 // ── BGM（喫茶店のジャズ）──────────────────────────────
 // assets/jazz.mp3: "jazz improvisation looped" by Alex McCulloch (Pro Sensory), CC0
 const BGM_ASSET = 'assets/jazz.mp3'
@@ -88,6 +119,21 @@ async function copyFileToClipboard($: any, path: string): Promise<void> {
   } catch (err: any) {
     $.ui.toast(`コピーできませんでした: ${err?.message ?? err}`)
   }
+}
+
+/** JSX の木を辿り、key と onPress を持つ要素を集める */
+function collectPress(node: any, out: Map<string, () => void>): void {
+  if (!node || typeof node !== 'object') return
+  if (Array.isArray(node)) {
+    for (const c of node) collectPress(c, out)
+    return
+  }
+  // 描画ツリーは { type, props: { key, ... }, children, onPress }（onPress は要素の直下）
+  const props = node.props ?? {}
+  const key = props.key ?? node.key
+  const f = node.onPress ?? props.onPress
+  if (typeof key === 'string' && typeof f === 'function') out.set(key, () => f({}))
+  collectPress(node.children ?? props.children, out)
 }
 
 function stopBgm(): void {
@@ -178,7 +224,21 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // 古い描画のボタンが押されても、キーから最新の処理を引いて実行する
+  on('ui.press', async ($, e, next) => {
+    if (e.requestId === PANE && e.plugin === 'cafe-files') {
+      const f = latestPress.get(e.element)
+      dbg($, `press ${e.element}${f ? '' : ' (no handler)'}`)
+      if (f) {
+        f()
+        return { element: e.element }
+      }
+    }
+    return next(e)
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const renderStart = Date.now()
     const els = $.ui.resolve(e)
     const io = { list: (p: string) => $.fs.list(p), stat: (p: string) => $.fs.stat(p) }
     const home = (await $.env.get('HOME')) ?? ''
@@ -231,13 +291,13 @@ export const register: Register = (on, options) => {
       let changed = false
       if (openEntry) {
         changed = (await warmPreview(fac, openEntry, surface).catch(() => false)) || changed
-        if (changed) $.ui.invalidate('ui.render')
+        if (changed) requestRedraw($, 'preview')
         for (const d of [1, -1]) {
           const n = files[(idx + d + files.length) % files.length]
           if (n && n !== openEntry) await warmPreview(fac, n, surface).catch(() => false)
         }
       }
-      if (await warmThumbs(fac, entries, surface).catch(() => false)) $.ui.invalidate('ui.render')
+      if (await warmThumbs(fac, entries, surface).catch(() => false)) requestRedraw($, 'thumbs')
     })()
     const sprite = pet && pet !== 'none' ? await loadPet(fac, pet).catch(() => null) : null
     const width = Number(e.props?.bodyColumns ?? e.viewport?.columns ?? 40)
@@ -291,6 +351,7 @@ export const register: Register = (on, options) => {
         void update($, openA, () => '')
       },
       openFile: path => {
+        dbg($, `openFile ${path}`)
         void update($, openA, () => path)
       },
       closeViewer: () => {
@@ -337,7 +398,7 @@ export const register: Register = (on, options) => {
       },
     }
 
-    return Screen(ctx, {
+    const tree = Screen(ctx, {
       entries,
       crumbs: breadcrumbs(cwd, home),
       cwd,
@@ -354,5 +415,10 @@ export const register: Register = (on, options) => {
       found,
       counts,
     } as any)
+    // 描いた木からボタンのキーと処理を集め、最新として覚える
+    latestPress.clear()
+    collectPress(tree, latestPress)
+    dbg($, `render ${Date.now() - renderStart}ms ${openEntry ? 'detail' : 'list'} entries=${entries.length} buttons=${latestPress.size}`)
+    return tree
   })
 }

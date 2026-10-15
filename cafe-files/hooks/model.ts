@@ -141,7 +141,7 @@ export async function listDir(io: FsIo, dir: string, opts: ListOpts): Promise<En
 
 const SCAN_DEPTH = 4
 const SCAN_BUDGET = 40
-const CACHE_MS = 30_000
+const CACHE_MS = 10 * 60_000 // フォルダの中身はめったに変わらない。再走査で描き直しが遅くならないよう長めに
 const SKIP_DIRS = new Set(['node_modules', '.git', '.build', 'build', 'DerivedData', 'Pods', 'Library'])
 const matchCache = new Map<string, { at: number; v: boolean }>()
 
