@@ -19,6 +19,8 @@ declare module 'claude-code' {
       pet: string
       /** カードの大きさ 's' | 'm' | 'l' */
       cardSize: string
+      /** 開いたときにジャズを流すか */
+      bgm: boolean
     }
   }
 }

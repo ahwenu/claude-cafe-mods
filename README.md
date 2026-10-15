@@ -8,6 +8,7 @@ Claude Code の右ペインに、プロジェクトのファイルを喫茶店�
 - サムネを押すと詳細画面。◀ ▶ で前後、伝票（ORDER）にファイル情報
 - 「☕ プロンプトに入れる」でファイルの絶対パスを入力欄へ挿入
 - ペイン幅に合わせて 1 行の枚数が変わる（カードの大きさは 小 / 中 / 大）
+- 開くと喫茶店のジャズが小さめの音量でループ再生（⚙ の「♪ BGM」でオン / オフ、閉じると停止）
 
 ## インストール
 
@@ -35,7 +36,7 @@ Claude Code のプロンプトで:
 ## 動作環境
 
 - function hooks（Mod）に対応した Claude Code（デスクトップアプリ同梱版など）
-- macOS（サムネの縮小に `sips` を使います。無い環境では種類のアイコンで表示）
+- macOS（サムネの縮小に `sips`、BGM の再生に `afplay` を使います。無い環境ではアイコン表示・無音になります）
 
 ## 開発
 
@@ -45,6 +46,10 @@ claude plugin test cafe-files
 ```
 
 バリスタのスプライトは `cafe-files/scripts/make-assets.py` で `~/.codex/pets` から生成しています。
+
+## クレジット
+
+- BGM: "jazz improvisation looped" by Alex McCulloch (Pro Sensory) — [OpenGameArt](https://opengameart.org/content/jazz-improvisation-looped), CC0
 
 ## ライセンス
 

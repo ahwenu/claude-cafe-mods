@@ -40,6 +40,8 @@ export function Settings(
     toggleHidden?: () => void
     toggleSort?: () => void
     cycleSize?: () => void
+    toggleBgm?: () => void
+    bgm?: boolean
     cardSize?: 's' | 'm' | 'l'
     sort?: 'name' | 'recent'
   }
@@ -76,6 +78,14 @@ export function Settings(
           />
         ) : (
           <Text color={SUB}>並び順: 名前順</Text>
+        )}
+        {ext.toggleBgm && (
+          <Button
+            key="set-bgm"
+            variant={ext.bgm ? 'primary' : 'secondary'}
+            label={ext.bgm ? '♪ BGM: オン' : '♪ BGM: オフ'}
+            onPress={() => ext.toggleBgm!()}
+          />
         )}
         {ext.cycleSize && (
           <Button

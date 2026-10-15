@@ -29,6 +29,30 @@ let resolveGen = 0
 
 type GoTarget = { kinds: Kind[]; showHidden: boolean }
 
+// ── BGM（喫茶店のジャズ）──────────────────────────────
+// assets/jazz.mp3: "jazz improvisation looped" by Alex McCulloch (Pro Sensory), CC0
+const BGM_ASSET = 'assets/jazz.mp3'
+const BGM_GAIN = 0.3
+let bgm: AbortController | null = null
+
+/** ループ再生を始める（既に鳴っていれば何もしない） */
+function startBgm($: any): void {
+  if (bgm) return
+  const ctl = new AbortController()
+  bgm = ctl
+  void $.audio
+    .play({ asset: BGM_ASSET }, { shouldLoop: true, gain: BGM_GAIN, signal: ctl.signal })
+    .catch(() => {})
+    .finally(() => {
+      if (bgm === ctl) bgm = null
+    })
+}
+
+function stopBgm(): void {
+  bgm?.abort()
+  bgm = null
+}
+
 /**
  * path を「対象ファイルがあるフォルダ」へ解決して cwd に書く。handler / command.run から呼ぶ
  * （render 中は state を書けない）。$ を他所へ渡せない制約のため、トップレベル関数で受ける。
@@ -61,6 +85,7 @@ export const register: Register = (on, options) => {
   const sortA = atom({ plugin: 'cafe-files', key: 'sort' } as const, initSort as string)
   const sizeA = atom({ plugin: 'cafe-files', key: 'cardSize' } as const, 'm')
   const petA = atom({ plugin: 'cafe-files', key: 'pet' } as const, initPet)
+  const bgmA = atom({ plugin: 'cafe-files', key: 'bgm' } as const, options?.bgm !== false)
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -77,6 +102,8 @@ export const register: Register = (on, options) => {
       if (s === 'name' || s === 'recent') await update($, sortA, () => s)
       const cs = await $.store.get('cardSize')
       if (cs === 's' || cs === 'm' || cs === 'l') await update($, sizeA, () => cs)
+      const b = await $.store.get('bgm')
+      if (typeof b === 'boolean') await update($, bgmA, () => b)
       const p = await $.store.get('pet')
       if (typeof p === 'string' && p) await update($, petA, () => p)
     } catch {
@@ -93,7 +120,19 @@ export const register: Register = (on, options) => {
       showHidden: (await read($, hiddenA)) === true,
     })
     await $.ui.open({ id: PANE, title: TITLE })
+    // 開いたらジャズを流す（設定でオフにできる）
+    if ((await read($, bgmA)) !== false) startBgm($)
     return { text: '喫茶ファイルを開きました。' }
+  })
+
+  // ペインを閉じたら（Mod の再読み込み・終了も含む）音楽も止める
+  on('ui.close', async ($, e, next) => {
+    if (e.id === PANE) stopBgm()
+    return next(e)
+  })
+  on('session.end', async ($, e, next) => {
+    stopBgm()
+    return next(e)
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -108,6 +147,7 @@ export const register: Register = (on, options) => {
     const showHidden = await read($, hiddenA)
     const sort: SortKey = (await read($, sortA)) === 'recent' ? 'recent' : 'name'
     const rawSize = await read($, sizeA)
+    const isBgm = (await read($, bgmA)) !== false
     const cardSize = rawSize === 's' || rawSize === 'l' ? rawSize : 'm'
     const pet = await read($, petA)
 
@@ -155,7 +195,17 @@ export const register: Register = (on, options) => {
       sort: SortKey
       cardSize: 's' | 'm' | 'l'
       cycleSize: () => void
+      bgm: boolean
+      toggleBgm: () => void
     } = {
+      bgm: isBgm,
+      toggleBgm: () => {
+        const v = !isBgm
+        void update($, bgmA, () => v)
+        void $.store.set('bgm', v).catch(() => {})
+        if (v) startBgm($)
+        else stopBgm()
+      },
       cardSize,
       cycleSize: () => {
         const v = cardSize === 's' ? 'm' : cardSize === 'm' ? 'l' : 's'
