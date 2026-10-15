@@ -90,18 +90,24 @@ async function pool(items: (() => Promise<void>)[], n: number): Promise<void> {
 }
 
 /** グリッド表示前に await してサムネを用意する（未準備は種別アイコンにフォールバック） */
-export async function warmThumbs($: any, entries: Entry[], surface: string): Promise<void> {
-  const todo = entries.filter(canThumb).slice(0, 80)
+/** 未生成のサムネを用意する。新しく作れたものがあれば true（描き直しの合図） */
+export async function warmThumbs($: any, entries: Entry[], surface: string): Promise<boolean> {
+  const todo = entries.filter(canThumb).slice(0, 80).filter(e => !cache.has(keyOf(e, surface, 192)))
+  if (todo.length === 0) return false
   await pool(
     todo.map(e => () => make($, e, surface, 192)),
     6,
   )
+  return todo.some(e => cache.has(keyOf(e, surface, 192)))
 }
 
 /** 詳細表示前に await して大きいプレビューを用意する */
-export async function warmPreview($: any, entry: Entry, surface: string): Promise<void> {
-  if (!canThumb(entry)) return
+export async function warmPreview($: any, entry: Entry, surface: string): Promise<boolean> {
+  if (!canThumb(entry)) return false
+  const key = keyOf(entry, surface, isTerm(surface) ? 1024 : 480)
+  if (cache.has(key)) return false
   await make($, entry, surface, isTerm(surface) ? 1024 : 480)
+  return cache.has(key)
 }
 
 function svgOf(data: string, w: number, h: number): string {

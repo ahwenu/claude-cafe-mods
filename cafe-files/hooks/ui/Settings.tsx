@@ -95,6 +95,9 @@ export function Settings(
           />
         )}
       </Box>
+      <Box key="settings-foot" flexDirection="row" justifyContent="flex-end">
+        <Button key="settings-done" variant="primary" label="✓ 完了" onPress={() => p.actions.toggleSettings()} />
+      </Box>
     </Box>
   )
 }

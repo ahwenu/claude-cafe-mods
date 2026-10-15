@@ -180,10 +180,11 @@ export const register: Register = (on, options) => {
     const cardSize = rawSize === 's' || rawSize === 'l' ? rawSize : 'm'
     const pet = await read($, petA)
 
-    const { entries, error: loadError } = await listDirResult(io, cwd, { kinds, showHidden, sort })
-    // 黒板メニュー用: 種別フィルタ前の直下件数
+    const { entries, error: loadError } = await listDirResult(io, cwd, { kinds, showHidden, sort, pruneEmpty: !openPath })
+    const isDetail = !!openPath && entries.some(x => x.path === openPath)
+    // 黒板メニュー用: 種別フィルタ前の直下件数（詳細表示中は使わないので数えない）
     const counts = { image: 0, audio: 0, video: 0, doc: 0, other: 0, dirs: 0 }
-    try {
+    if (!isDetail) try {
       for (const it of await $.fs.list(cwd)) {
         if (!showHidden && it.name.startsWith('.')) continue
         if (it.kind === 'dir') counts.dirs++
@@ -194,7 +195,7 @@ export const register: Register = (on, options) => {
     }
     // 直下に表示できるフォルダが無ければ、配下を探査して対象のあるフォルダを探す
     const found =
-      !loadError && !entries.some(x => x.isDir)
+      !isDetail && !loadError && !entries.some(x => x.isDir)
         ? await findMatchDirs(io, cwd, { kinds, showHidden }).catch(() => [])
         : []
     const files = entries.filter(x => !x.isDir)
@@ -210,8 +211,20 @@ export const register: Register = (on, options) => {
       plugin: { root: $.plugin.root },
     }
     const surface = (e.surface ?? 'terminal') as Ctx['surface']
-    await warmThumbs(fac, entries, surface).catch(() => {})
-    if (openEntry) await warmPreview(fac, openEntry, surface).catch(() => {})
+    // 画像の縮小は待たずに描く（未準備の間は小さいサムネや種類アイコン）。
+    // 裏で用意して、新しくできたら描き直す。詳細では前後のファイルも先読みする
+    void (async () => {
+      let changed = false
+      if (openEntry) {
+        changed = (await warmPreview(fac, openEntry, surface).catch(() => false)) || changed
+        if (changed) $.ui.invalidate('ui.render')
+        for (const d of [1, -1]) {
+          const n = files[(idx + d + files.length) % files.length]
+          if (n && n !== openEntry) await warmPreview(fac, n, surface).catch(() => false)
+        }
+      }
+      if (await warmThumbs(fac, entries, surface).catch(() => false)) $.ui.invalidate('ui.render')
+    })()
     const sprite = pet && pet !== 'none' ? await loadPet(fac, pet).catch(() => null) : null
     const width = Number(e.props?.bodyColumns ?? e.viewport?.columns ?? 40)
     // engine の制約: $ はオブジェクトに入れられない。UI は els / e だけで描く

@@ -47,15 +47,24 @@ export function gearSvg(isOpen: boolean, color = '#EDB273'): string {
 }
 function GearLink(ctx: Ctx, isOpen: boolean, toggle: () => void): any {
   const { Box, Markdown, Button, Svg } = ctx.els
-  const key = isOpen ? 'settings-close' : 'settings-open'
-  if (!Markdown || !Svg || ctx.surface === 'terminal') {
-    return <Button key={key} hotkey="s" label={isOpen ? '✕' : '⚙'} onPress={toggle} />
+  // 開いている間は確実に押せる普通のボタンで「閉じる」
+  if (isOpen || !Markdown || !Svg || ctx.surface === 'terminal') {
+    return (
+      <Button
+        key={isOpen ? 'settings-close' : 'settings-open'}
+        hotkey="s"
+        variant={isOpen ? 'primary' : undefined}
+        label={isOpen ? '✕ 閉じる' : '⚙'}
+        onPress={toggle}
+      />
+    )
   }
+  // 閉じている間は枠なしのギア。押せる範囲はアイコンより一回り広く取る
   return (
-    <Box key="gear" flexDirection="row" alignItems="center">
-      <Svg source={gearSvg(isOpen)} alt={isOpen ? '設定を閉じる' : '設定'} width={26} height={26} />
-      <Box position="absolute" top={0} left={0}>
-        <Markdown key={key} text={`[⠀⠀⠀](${GEAR_HREF})`} pressableLinks={[GEAR_HREF]} onLinkPress={() => toggle()} />
+    <Box key="gear" flexDirection="row" alignItems="center" paddingX={1}>
+      <Svg source={gearSvg(false)} alt="設定" width={26} height={26} />
+      <Box position="absolute" top={0} left={0} right={0} bottom={0} justifyContent="center" alignItems="center">
+        <Markdown key="settings-open" text={`[⠀⠀⠀⠀](${GEAR_HREF})`} pressableLinks={[GEAR_HREF]} onLinkPress={() => toggle()} />
       </Box>
     </Box>
   )
