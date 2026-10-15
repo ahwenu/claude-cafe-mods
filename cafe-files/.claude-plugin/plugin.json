@@ -1,0 +1,53 @@
+{
+  "name": "cafe-files",
+  "version": "1.0.0",
+  "author": {
+    "name": "AHWENU'S COFFEE"
+  },
+  "description": "喫茶店風のファイルペイン。PJ直下の画像などをサムネで並べ、詳細表示とプロンプトへのパス挿入ができる",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "kinds": {
+      "type": "string",
+      "title": "表示する種別（カンマ区切り: image,audio,video,doc,other）",
+      "description": "フォルダは常に表示。例: image,doc",
+      "default": "image"
+    },
+    "pet": {
+      "type": "string",
+      "title": "隅のキャラ",
+      "description": "黒板の横に立つカフェ店員（none で非表示）",
+      "default": "barista",
+      "options": [
+        "barista",
+        "none"
+      ]
+    },
+    "showHidden": {
+      "type": "boolean",
+      "title": "隠しファイルを表示",
+      "description": "ドットで始まるファイルを表示する",
+      "default": false
+    },
+    "sort": {
+      "type": "string",
+      "title": "並び順",
+      "description": "名前順 / 新しい順",
+      "default": "name",
+      "options": [
+        "name",
+        "recent"
+      ]
+    }
+  },
+  "homepage": "https://github.com/ahwenu/claude-cafe-mods",
+  "repository": "https://github.com/ahwenu/claude-cafe-mods",
+  "license": "MIT",
+  "keywords": [
+    "files",
+    "pane",
+    "images",
+    "cafe",
+    "thumbnail"
+  ]
+}

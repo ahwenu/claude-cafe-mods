@@ -1,0 +1,17 @@
+{
+  "name": "cafe-mods",
+  "owner": {
+    "name": "AHWENU'S COFFEE"
+  },
+  "metadata": {
+    "description": "AHWENU'S COFFEE の Claude Code Mod 集（喫茶店テーマ）"
+  },
+  "plugins": [
+    {
+      "name": "cafe-files",
+      "source": "./cafe-files",
+      "description": "喫茶店風のファイルペイン（/files）。PJ フォルダの画像などをサムネで並べ、詳細表示とプロンプトへのパス挿入ができる",
+      "version": "1.0.0"
+    }
+  ]
+}
