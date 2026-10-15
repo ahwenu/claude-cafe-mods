@@ -35,23 +35,52 @@ const BGM_ASSET = 'assets/jazz.mp3'
 const BGM_GAIN = 0.3
 let bgm: AbortController | null = null
 
-/** ループ再生を始める（既に鳴っていれば何もしない） */
+/**
+ * ループ再生を始める（既に鳴っていれば何もしない）。
+ * macOS では afplay を直接起動してループさせる（デスクトップアプリのセッションでは
+ * $.audio.play が再生されずに終わるため）。afplay が無い環境では $.audio.play に任せる。
+ */
 function startBgm($: any): void {
   if (bgm) return
   const ctl = new AbortController()
   bgm = ctl
-  void $.audio
-    .play({ asset: BGM_ASSET }, { shouldLoop: true, gain: BGM_GAIN, signal: ctl.signal })
-    .catch(() => {})
-    .finally(() => {
-      if (bgm === ctl) bgm = null
-    })
+  void (async () => {
+    const file = `${$.plugin.root}/${BGM_ASSET}`
+    const hasAfplay = await $.fs.exists('/usr/bin/afplay').catch(() => false)
+    if (!hasAfplay) {
+      await $.audio
+        .play({ asset: BGM_ASSET }, { shouldLoop: true, gain: BGM_GAIN, signal: ctl.signal })
+        .catch((err: any) => $.ui.log(`cafe-files: BGM を再生できませんでした: ${err?.message ?? err}`, { to: 'debug' }))
+      return
+    }
+    let fails = 0
+    while (!ctl.signal.aborted && fails < 3) {
+      const started = Date.now()
+      const child = $.process.spawn({ argv: ['/usr/bin/afplay', '-v', String(BGM_GAIN), file] })
+      const kill = () => void child.return?.(undefined)
+      ctl.signal.addEventListener('abort', kill, { once: true })
+      try {
+        for await (const _piece of child) {
+          if (ctl.signal.aborted) break
+        }
+      } catch {
+        // 起動できない・止めたときに投げられる。下の fails で打ち切る
+      } finally {
+        ctl.signal.removeEventListener('abort', kill)
+      }
+      // すぐ終わる＝再生できていない。3 回続いたら諦める
+      fails = Date.now() - started < 3000 ? fails + 1 : 0
+    }
+  })().finally(() => {
+    if (bgm === ctl) bgm = null
+  })
 }
 
 function stopBgm(): void {
   bgm?.abort()
   bgm = null
 }
+
 
 /**
  * path を「対象ファイルがあるフォルダ」へ解決して cwd に書く。handler / command.run から呼ぶ

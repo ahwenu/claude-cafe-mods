@@ -52,3 +52,38 @@ test('BGM off in userConfig plays nothing', { options: { bgm: false } } as any, 
   await new Promise(r => setTimeout(r, 50))
   expect(plays).toHaveLength(0)
 })
+
+test('on macOS the loop runs afplay once', async ($, on) => {
+  mock.env(on, { HOME: '/Users/me' })
+  on('session.cwd', async () => ({ value: '/Users/me/proj' }))
+  on('fs.list', async () => ({ value: [{ name: 'a.png', kind: 'file', size: 10, mtimeMs: 1, isLink: false }] }))
+  on('fs.exists', async (_$: any, e: any) => ({ value: String(e.path ?? e).endsWith('afplay') }) as any)
+  on('ui.open', async () => ({ value: { isPlaced: true } }) as any)
+  const spawned: string[][] = []
+  let killed = 0
+  on('process.spawn', async function* (_$: any, e: any) {
+    spawned.push(e.argv)
+    try {
+      // 再生中（終わらない）。テストの生成器は yield の所でしか止まれないので、時々出力を出す
+      for (;;) {
+        await new Promise(r => setTimeout(r, 20))
+        yield { stream: 'stdout', text: '.' }
+      }
+    } finally {
+      killed++
+    }
+    return { code: 0, signal: null } as any
+  } as any)
+  const wait = async (f: () => boolean) => {
+    for (let i = 0; i < 80 && !f(); i++) await new Promise(r => setTimeout(r, 10))
+  }
+  await $.command.run({ command: 'files' })
+  await wait(() => spawned.length > 0)
+  expect(spawned[0][0]).toBe('/usr/bin/afplay')
+  expect(spawned[0].at(-1)).toMatch(/assets\/jazz\.mp3$/)
+  // 2 回目の /files では重ねて起動しない
+  await $.command.run({ command: 'files' })
+  await new Promise(r => setTimeout(r, 50))
+  expect(spawned).toHaveLength(1)
+  expect(killed).toBe(0)
+})
