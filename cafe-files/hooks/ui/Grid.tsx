@@ -132,17 +132,31 @@ function FolderTile(ctx: Ctx, e: Entry, i: number, actions: Actions): any {
   )
 }
 
+// デスクトップの実測（/files-lab）: 1 セル ≒ 7.9px、空白（U+2800）1 文字 ≒ 8.9px、ボタン 1 段 ≒ 24px。
+// ボタンのラベルに改行は使えず、文字が枠より長いと末尾が「…」になる。
+const CELL_PX = 7.9
+const BLANK_PX = 8.9
+const BUTTON_PAD_PX = 16
+const BUTTON_ROW_PX = 24
+
+/** 文字を出さないボタンを横いっぱいの幅にするための空白ラベル（「…」が出ないぎりぎりの長さ） */
+export function coverLabel(widthCells: number): string {
+  const inner = widthCells * CELL_PX - 2 - BUTTON_PAD_PX
+  const n = Math.max(1, Math.floor(inner / BLANK_PX) - 1)
+  return '\u2800'.repeat(n)
+}
+
 /**
- * サムネ全体を覆うボタン（カーソルを乗せると出る）。ボタンの中には文字しか入れられないので、
- * 改行で高さを、ボックスの stretch で幅を取り、画像の上に半透明のボタンをかぶせる。
- * 1 回目のクリックは ui.focus で届く（register.tsx の対策）ので、乗せて押せば開く。
+ * カード全体を覆うボタンの壁（カーソルを乗せると出る）。画像そのものはボタンにできないので、
+ * 文字を出さない半透明のボタンを横いっぱい・縦に積み重ねて、カードのどこを押しても開くようにする。
+ * 1 回目のクリックは ui.focus で届く（register.tsx の対策）ので、乗せて押せば 1 回で開く。
  */
-function DetailCover(ctx: Ctx, i: number, hPx: number, open: () => void): any {
+function CardCover(ctx: Ctx, i: number, widthCells: number, heightPx: number, open: () => void): any {
   const { Box } = ctx.els
   const Button: any = mkButton(ctx)
   if (ctx.surface === 'terminal') return null
-  const pad = Math.max(1, Math.ceil((hPx / 20 - 1) / 2)) // 1 行 ≒ 20px。はみ出した分は画像の枠で切れる
-  const nl = '\n'.repeat(pad)
+  const rows = Math.ceil(heightPx / BUTTON_ROW_PX) + 1 // はみ出した分は overflow で切れる
+  const label = coverLabel(widthCells)
   return (
     <Box
       position="absolute"
@@ -153,11 +167,11 @@ function DetailCover(ctx: Ctx, i: number, hPx: number, open: () => void): any {
       display="none"
       hover={{ display: 'flex' }}
       flexDirection="column"
-      alignItems="stretch"
-      justifyContent="center"
       overflow="hidden"
     >
-      <Button key={`detail-${i}`} label={`${nl}🔍 詳細を見る${nl}`} onPress={open} />
+      {Array.from({ length: rows }, (_, r) => (
+        <Button key={r === 0 ? `detail-${i}` : `detail-${i}-${r}`} label={label} onPress={open} />
+      ))}
     </Box>
   )
 }
@@ -186,12 +200,12 @@ function Card(ctx: Ctx, e: Entry, i: number, actions: Actions, cardW: number): a
     >
       <Box height={isTerm ? rows : undefined} justifyContent="center" alignItems="center">
         {thumb}
-        {DetailCover(ctx, i, Math.round(px * 0.75), open)}
       </Box>
       <Button key={`open-${i}`} label={shorten(e.name, cardW - 4)} onPress={open} />
       <Text color={SUB}>
         {badge}
       </Text>
+      {CardCover(ctx, i, cardW, Math.round(px * 0.75) + 80, open)}
     </Box>
   )
 }
